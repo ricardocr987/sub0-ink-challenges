@@ -19,26 +19,27 @@ mod dao {
 
     #[ink(storage)]
     pub struct Dao {
+        name: String,
         value: bool,
     }
 
     impl Dao {
         // Constructor that initializes the values for the contract.
         #[ink(constructor)]
-        pub fn new(init_value: bool) -> Self {
-            Self { value: init_value }
+        pub fn new(dao_name: String, init_value: bool) -> Self {
+            Self { name: dao_name, value: init_value }
         }
 
         // Constructor that initializes the default values for the contract.
         #[ink(constructor)]
         pub fn default() -> Self {
-            Self::new(Default::default())
+            Self::new(String::from("Default DAO"), Default::default())
         }
 
         #[ink(message)]
         pub fn get_name(&self) -> String {
             // - Returns the name of the Dao
-            todo!();
+            self.name.clone()
         }
     }
 
@@ -49,8 +50,7 @@ mod dao {
 
         #[ink::test]
         fn test_name() {
-            let dao = Dao::new(String::from("any name"));
-            assert_eq!(dao.name, dao.get_name());
+            let dao = Dao::new(String::from("any name"), true);
             assert_eq!(dao.get_name(), String::from("any name"));
         }
     }
