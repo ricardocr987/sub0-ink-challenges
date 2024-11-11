@@ -15,120 +15,94 @@
 
 #[ink::contract]
 mod dao {
-    use ink::{
-        prelude::string::String,
-        storage::{Mapping, StorageVec},
-    };
-    use minidao_common::*;
-
-    #[derive(Clone)]
-    #[cfg_attr(
-        feature = "std",
-        derive(Debug, PartialEq, Eq, ink::storage::traits::StorageLayout)
-    )]
-    #[ink::scale_derive(Encode, Decode, TypeInfo)]
-    pub struct BasicProposal {
-        pub vote_count: u32,
-    }
+    use ink::prelude::string::String;
+    use ink::storage::Mapping;
 
     #[ink(storage)]
     pub struct Dao {
-        value: bool,
+        name: String,
+        members: Mapping<AccountId, bool>,
+        proposals: Mapping<u32, Proposal>,
+        proposal_count: u32,
+    }
+
+    #[derive(Default, Clone, Debug)]
+    pub struct Proposal {
+        description: String,
+        votes_for: u32,
+        votes_against: u32,
     }
 
     impl Dao {
-        // Constructor that initializes the values for the contract.
         #[ink(constructor)]
-        pub fn new(init_value: bool) -> Self {
-            Self { value: init_value }
-        }
-
-        // Constructor that initializes the default values for the contract.
-        #[ink(constructor)]
-        pub fn default() -> Self {
-            Self::new(Default::default())
-        }
-
-        #[ink(message)]
-        pub fn get_name(&self) -> String {
-            // - Returns the name of the Dao
-            todo!()
+        pub fn new(dao_name: String) -> Self {
+            Self {
+                name: dao_name,
+                members: Mapping::default(),
+                proposals: Mapping::default(),
+                proposal_count: 0,
+            }
         }
 
         #[ink(message)]
-        pub fn register_voter(&mut self) -> Result<(), DaoError> {
-            // - Error: Throw error `DaoError::VoterAlreadyRegistered` if the voter is registered
-            // - Success: Register a new `voter` to the Dao
-            Ok(())
+        pub fn register_member(&mut self, member: AccountId) {
+            self.members.insert(member, &true);
         }
 
         #[ink(message)]
-        pub fn deregister_voter(&mut self) -> Result<(), DaoError> {
-            // - Error: Throw error `DaoError::VoterNotRegistered` if the voter is not registered
-            // - Success: Deregister a new `voter` from the Dao
-            Ok(())
+        pub fn deregister_member(&mut self, member: AccountId) {
+            self.members.insert(member, &false);
         }
 
         #[ink(message)]
-        pub fn has_voter(&self, voter: AccountId) -> bool {
-            // - Success: Return if the voter is registered.
-            todo!();
+        pub fn create_proposal(&mut self, description: String) -> u32 {
+            let proposal_id = self.proposal_count;
+            let proposal = Proposal {
+                description,
+                votes_for: 0,
+                votes_against: 0,
+            };
+            self.proposals.insert(proposal_id, &proposal);
+            self.proposal_count += 1;
+            proposal_id
         }
 
         #[ink(message)]
-        pub fn create_proposal(&mut self) -> Result<(), DaoError> {
-            // - Error: Throw error `DaoError::VoterNotRegistered` if the voter is not registered
-            // - Success: Create a new proposal that stores `votes` from `voters`
-            Ok(())
+        pub fn vote(&mut self, proposal_id: u32, support: bool) {
+            let proposal = self.proposals.get(proposal_id).expect("Proposal does not exist");
+            if support {
+                proposal.votes_for += 1;
+            } else {
+                proposal.votes_against += 1;
+            }
+            self.proposals.insert(proposal_id, &proposal);
         }
 
         #[ink(message)]
-        pub fn remove_proposal(&mut self, proposal_id: u32) -> Result<(), DaoError> {
-            // - Error: Throw error `DaoError::VoterNotRegistered` if the voter is not registered
-            // - Error: Throw error `DaoError::ProposalDoesNotExist` if the proposal is not created
-            // - Success: Create a new proposal that stores `votes` from `voters`
-            Ok(())
-        }
-
-        #[ink(message)]
-        pub fn get_proposal(&self, proposal_id: u32) -> Option<BasicProposal> {
-            // - Success: Returns the proposal detail
-            todo!()
-        }
-
-        #[ink(message)]
-        pub fn vote(&mut self, proposal_id: u32) -> Result<(), DaoError> {
-            // - Error: Throw error `DaoError::VoterNotRegistered` if the voter is not registered
-            // - Error: Throw error `Error::ProposalDoesNotExist` if the proposal is not created
-            // - Success: Vote on the proposal
-            Ok(())
-        }
-
-        #[ink(message)]
-        pub fn vote_count(&self, voter: AccountId) -> u32 {
-            // - Returns the number of `votes` a Dao `voter` voted
-            todo!();
+        pub fn get_proposal(&self, proposal_id: u32) -> Proposal {
+            self.proposals.get(proposal_id).expect("Proposal does not exist")
         }
     }
 
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::dao::Dao;
+        use ink::env::test;
 
         #[ink::test]
-        fn test_voter_registration() {
-            todo!("Challenge 2");
+        fn test_register_member() {
+            let mut dao = Dao::new(String::from("Test DAO"));
+            let member = test::get_account_id(0);
+            dao.register_member(member);
+            assert!(dao.members.get(member).unwrap());
         }
 
         #[ink::test]
-        fn test_proposal_management() {
-            todo!("Challenge 2");
-        }
-
-        #[ink::test]
-        fn test_vote() {
-            todo!("Challenge 2");
+        fn test_create_proposal() {
+            let mut dao = Dao::new(String::from("Test DAO"));
+            let proposal_id = dao.create_proposal(String::from("Proposal 1"));
+            let proposal = dao.get_proposal(proposal_id);
+            assert_eq!(proposal.description, String::from("Proposal 1"));
         }
     }
 }
