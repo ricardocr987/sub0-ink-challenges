@@ -35,12 +35,12 @@ mod dao {
         // Constructor that initializes the values for the contract.
         #[ink(constructor)]
         pub fn new(name: String, superdao: AccountId) -> Self {
-            // Register your Dao as a member of the Superdao.
             let mut instance = Self {
                 name,
                 superdao: superdao.into(),
                 voters: StorageVec::new(),
             };
+            instance.superdao.register(instance.env().account_id());
             instance
         }
 
@@ -74,15 +74,23 @@ mod dao {
             &mut self,
             call: ContractCall,
         ) -> Result<(), DaoError> {
-            // - Error: Throw error `DaoError::VoterNotRegistered` if the voter is not registered
-            // - Success: Create a SuperDao proposal to call a contract method.
+            // Check if the voter is registered
+            if !self.has_voter(self.env().caller()) {
+                return Err(DaoError::VoterNotRegistered);
+            }
+            // Create a proposal in the Super DAO
+            self.superdao.create_proposal(call);
             Ok(())
         }
 
         #[ink(message)]
         pub fn vote_proposal(&mut self, proposal_id: u32, vote: bool) -> Result<(), DaoError> {
-            // - Error: Throw error `DaoError::VoterNotRegistered` if the voter is not registered
-            // - Success: Vote a SuperDao proposal.
+            // Check if the voter is registered
+            if !self.has_voter(self.env().caller()) {
+                return Err(DaoError::VoterNotRegistered);
+            }
+            // Call the Super DAO to vote on the proposal
+            self.superdao.vote(proposal_id, vote);
             Ok(())
         }
     }
